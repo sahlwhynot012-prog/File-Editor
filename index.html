@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script>
+  /* Start-up check: if the editor script doesn't start, say why instead of showing a dead page. */
+  (function () {
+    var EXPECTED = '2026.10.23.1', errs = [];
+    window.addEventListener('error', function (e) {
+      errs.push((e.message || 'Error') + (e.lineno ? ' (line ' + e.lineno + ')' : ''));
+    });
+    window.addEventListener('load', function () {
+      setTimeout(function () {
+        if (window.__PDFSTUDIO_READY) return;
+        var msg;
+        if (typeof pdfjsLib === 'undefined' || typeof PDFLib === 'undefined')
+          msg = 'The PDF libraries couldn\u2019t load. cdnjs.cloudflare.com may be blocked on this network or by an admin.';
+        else
+          msg = 'The editor script didn\u2019t start. Try a hard refresh (Ctrl+Shift+R).';
+        var b = document.createElement('div');
+        b.className = 'boot-error'; b.setAttribute('role', 'alert');
+        b.innerHTML = '<b>PDF Studio couldn\u2019t start.</b><span></span><code></code>';
+        b.querySelector('span').textContent = msg;
+        b.querySelector('code').textContent = errs.length ? 'Error: ' + errs.slice(0, 3).join(' \u00b7 ') : '';
+        document.body.appendChild(b);
+      }, 1500);
+    });
+  })();
+  </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>PDF Studio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Dancing+Script:wght@600&family=Great+Vibes&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="nodoc">
+
+<!-- ============================== Unified toolbar -->
+<header class="toolbar">
+  <div class="tb-title">
+    <div class="app-tile"><i data-icon="file" data-size="15"></i></div>
+    <div class="title-block">
+      <button class="doc-name" id="docName" data-tip="Rename">PDF Studio</button>
+      <div class="doc-meta" id="docMeta"></div>
+    </div>
+  </div>
+
+  <div class="tb-group">
+    <button class="tb-btn" id="btnHome" data-tip="Home — all your documents"><i data-icon="home"></i></button>
+    <button class="tb-btn needs-doc" id="btnSidebar" data-tip="Show or Hide Pages"><i data-icon="sidebar"></i></button>
+    <button class="tb-btn gas-only" id="btnOpenDrive" data-tip="Open from Google Drive"><i data-icon="folder"></i></button>
+    <button class="tb-btn" id="btnOpenLocal" data-tip="Open from Computer|Ctrl O"><i data-icon="upload"></i></button>
+    <div class="dropdown needs-doc">
+      <button class="tb-btn" data-menu="insertMenu" data-tip="Insert File After Current Page">
+        <i data-icon="filePlus"></i><i data-icon="chev" data-size="11" class="chev"></i>
+      </button>
+      <div class="menu" id="insertMenu">
+        <button data-insert="drive" class="gas-only"><i data-icon="folder" data-size="14"></i>From Google Drive…</button>
+        <button data-insert="local"><i data-icon="upload" data-size="14"></i>From Computer…</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="segmented needs-doc">
+    <button id="btnUndo" data-tip="Undo|Ctrl Z"><i data-icon="undo"></i></button>
+    <button id="btnRedo" data-tip="Redo|Ctrl Shift Z"><i data-icon="redo"></i></button>
+  </div>
+
+  <div class="segmented needs-doc">
+    <button id="btnZoomOut" data-tip="Zoom Out|Ctrl −"><i data-icon="minus"></i></button>
+    <button id="zoomVal" class="zoom-val" data-tip="Actual Size">100%</button>
+    <button id="btnZoomIn" data-tip="Zoom In|Ctrl +"><i data-icon="plus"></i></button>
+    <button id="btnFit" data-tip="Fit Width|Ctrl 0"><i data-icon="fit"></i></button>
+  </div>
+
+  <div class="pager needs-doc">
+    <input id="pageNum" type="number" min="1" value="1" aria-label="Page number">
+    <span id="pageCount">of 0</span>
+  </div>
+
+  <div class="spacer"></div>
+
+  <label class="search needs-doc">
+    <i data-icon="search" data-size="14"></i>
+    <input id="findInput" placeholder="Search" spellcheck="false">
+    <span class="search-acts">
+      <button id="btnFind" data-tip="Find Next|Enter"><i data-icon="enter" data-size="13"></i></button>
+      <button id="btnHlAll" data-tip="Highlight All Matches"><i data-icon="wand" data-size="13"></i></button>
+    </span>
+  </label>
+
+  <div class="tb-group">
+    <button class="tb-btn" id="btnHelp" data-tip="Keyboard Shortcuts"><i data-icon="keyboard"></i></button>
+    <button class="tb-btn needs-doc" id="btnPng" data-tip="Export Page as PNG"><i data-icon="image"></i></button>
+    <button class="tb-btn needs-doc" id="btnPrint" data-tip="Print"><i data-icon="printer"></i></button>
+    <button class="tb-btn needs-doc" id="btnDownload" data-tip="Download PDF"><i data-icon="download"></i></button>
+  </div>
+
+  <button class="btn share-btn needs-doc" id="btnShare" data-tip="Share — private, organization or public"><i data-icon="share" data-size="15"></i><span>Share</span></button>
+  <div class="dropdown needs-doc">
+    <button class="btn-primary" data-menu="saveMenu">
+      <i data-icon="cloud" data-size="15"></i><span>Save</span><i data-icon="chev" data-size="11" class="chev"></i>
+    </button>
+    <div class="menu" id="saveMenu">
+      <button data-save="copy"><i data-icon="filePlus" data-size="14"></i>Save as New Copy in Drive…</button>
+      <button data-save="overwrite" id="saveOverwrite"><i data-icon="cloud" data-size="14"></i>Replace Original in Drive</button>
+      <button id="autoDriveItem" class="toggle-item"><i data-icon="check" data-size="14"></i>Auto-save to Drive</button>
+    </div>
+  </div>
+
+  <div class="dropdown">
+    <button class="tb-btn acct-btn" id="btnAcct" data-menu="acctMenu" data-tip="Account"></button>
+    <div class="menu" id="acctMenu">
+      <div class="menu-head" id="acctWho"></div>
+      <button id="acctHome"><i data-icon="home" data-size="14"></i>Home</button>
+      <button id="acctSignIn"><i data-icon="user" data-size="14"></i>Sign in with Google…</button>
+      <button id="acctSignOut"><i data-icon="logout" data-size="14"></i>Sign out</button>
+    </div>
+  </div>
+</header>
+
+<!-- ============================== Format bar -->
+<div class="formatbar" id="propbar">
+  <div class="prop" data-for="hlmode">
+    <div class="segmented small">
+      <button data-hl="highlight" data-tip="Highlight"><i data-icon="highlighter" data-size="14"></i></button>
+      <button data-hl="underline" data-tip="Underline"><i data-icon="underline" data-size="14"></i></button>
+      <button data-hl="strike" data-tip="Strikethrough"><i data-icon="strike" data-size="14"></i></button>
+    </div>
+  </div>
+  <div class="prop" data-for="color">
+    <div class="swatches" id="swatches"></div>
+    <span class="color-well" data-tip="Custom Color"><input type="color" id="color"></span>
+  </div>
+  <div class="prop" data-for="width">
+    <label for="width">Size</label>
+    <input type="range" id="width" min="1" max="40">
+    <span id="widthVal" class="val"></span>
+  </div>
+  <div class="prop" data-for="opacity">
+    <label for="opacity">Opacity</label>
+    <input type="range" id="opacity" min="10" max="100">
+    <span id="opacityVal" class="val"></span>
+  </div>
+  <div class="prop" data-for="fill">
+    <label class="check"><input type="checkbox" id="fill"> Fill</label>
+    <span class="color-well" data-tip="Fill Color"><input type="color" id="fillColor"></span>
+  </div>
+  <div class="prop" data-for="font">
+    <select id="font" aria-label="Font">
+      <option value="Helvetica">Helvetica</option>
+      <option value="Times">Times</option>
+      <option value="Courier">Courier</option>
+    </select>
+    <input type="number" id="fontSize" min="4" max="300" aria-label="Font size">
+    <div class="segmented small">
+      <button id="bold" class="tog" data-tip="Bold"><b>B</b></button>
+      <button id="italic" class="tog" data-tip="Italic"><i class="it">I</i></button>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<!-- ============================== Workspace -->
+<main class="main">
+  <aside class="sidebar" id="sidebar" aria-label="Pages">
+    <div class="sb-head"><span>Pages</span><span class="sb-count" id="sbCount"></span></div>
+    <div class="thumbs" id="thumbs" tabindex="0" role="listbox" aria-label="Page thumbnails" aria-multiselectable="true"></div>
+    <div class="sb-foot">
+      <button data-tact="rotl" data-tip="Rotate Left"><i data-icon="rotl" data-size="15"></i></button>
+      <button data-tact="rotr" data-tip="Rotate Right"><i data-icon="rotr" data-size="15"></i></button>
+      <button data-tact="dup" data-tip="Duplicate"><i data-icon="copy" data-size="15"></i></button>
+      <span class="spacer"></span>
+      <button data-tact="del" data-tip="Delete" class="danger"><i data-icon="trash" data-size="15"></i></button>
+    </div>
+  </aside>
+  <div class="stage">
+    <section class="viewer" id="viewer"></section>
+    <nav class="palette" id="tools" aria-label="Tools"></nav>
+  </div>
+
+  <section class="home" id="home" aria-label="Home">
+    <div class="home-inner">
+      <header class="home-head">
+        <div class="home-brand">
+          <div class="hero-tile sm"><i data-icon="file" data-size="22"></i></div>
+          <div><h1>PDF Studio</h1><p>Write, draw, sign and share PDFs</p></div>
+        </div>
+        <div class="spacer"></div>
+        <button id="homeBack" class="btn" hidden><i data-icon="chev" data-size="12" class="flip"></i>Back to <b id="homeBackName"></b></button>
+        <div id="homeAcct" class="home-acct"></div>
+      </header>
+
+      <div class="home-actions">
+        <button id="wBlank" class="wa">
+          <span class="wa-ic"><i data-icon="filePlus" data-size="18"></i></span>
+          <span class="wa-txt"><b>New Blank Document</b><span>An empty letter-size page</span></span>
+        </button>
+        <button id="wLocal" class="wa">
+          <span class="wa-ic"><i data-icon="upload" data-size="18"></i></span>
+          <span class="wa-txt"><b>Open from Computer</b><span>PDF, Word, Excel, images, text…</span></span>
+        </button>
+        <button id="wDrive" class="wa">
+          <span class="wa-ic"><i data-icon="folder" data-size="18"></i></span>
+          <span class="wa-txt"><b>Open from Google Drive</b><span>PDFs, Docs, Sheets, Slides, Office files</span></span>
+        </button>
+      </div>
+
+      <div class="home-sec"><h2>Recent</h2><span class="muted small">Edits are saved automatically</span></div>
+      <div class="recent-grid" id="recentGrid"></div>
+      <p class="muted home-empty" id="recentEmpty" hidden>Nothing here yet. Documents you open or edit will show up here.</p>
+
+      <div id="driveSec" hidden>
+        <div class="home-sec"><h2>In your Google Drive</h2></div>
+        <div class="recent-grid" id="driveGrid"></div>
+        <p class="muted home-empty" id="driveEmpty" hidden>No other PDFs found.</p>
+      </div>
+      <p class="drop-hint">or drop files anywhere in this window</p>
+    </div>
+  </section>
+</main>
+
+<input type="file" id="pdfInput" multiple hidden
+  accept=".pdf,application/pdf,image/*,.doc,.docx,.odt,.rtf,.xls,.xlsx,.ods,.csv,.tsv,.ppt,.pptx,.odp,.txt,.md,.html,.htm,.json,.xml,.log">
+<input type="file" id="imgInput" accept="image/*" hidden>
+
+<!-- ============================== Sheets -->
+<div class="modal" id="driveModal">
+  <div class="dialog wide">
+    <div class="dlg-head"><h3 id="driveTitle">Open from Drive</h3><span class="lights"><button class="x" data-close="driveModal" aria-label="Close"><i data-icon="x" data-size="13"></i></button><i class="tl" aria-hidden="true"></i><i class="tl" aria-hidden="true"></i></span></div>
+    <label class="search big"><i data-icon="search" data-size="14"></i><input id="driveSearch" placeholder="Search your Drive or paste a link" spellcheck="false"></label>
+    <p id="driveNote" class="muted small drive-note" hidden>This list shows files PDF Studio created or opened. Add a Google API key in config.js to browse your whole Drive.</p>
+    <div class="drive-list" id="driveList"></div>
+  </div>
+</div>
+
+<div class="modal" id="shareModal">
+  <div class="dialog share">
+    <div class="dlg-head"><h3 id="shareTitle">Share</h3><span class="lights"><button class="x" data-close="shareModal" aria-label="Close"><i data-icon="x" data-size="13"></i></button><i class="tl" aria-hidden="true"></i><i class="tl" aria-hidden="true"></i></span></div>
+    <div class="share-top"><span id="shareStatus" class="share-status"></span></div>
+    <div class="share-add">
+      <input id="shareEmails" placeholder="Add people by email" spellcheck="false" autocomplete="off">
+      <select id="shareRole" aria-label="Role">
+        <option value="reader">Viewer</option><option value="commenter">Commenter</option><option value="writer">Editor</option>
+      </select>
+      <button id="shareSend" class="btn-primary">Share</button>
+    </div>
+    <label class="check small share-notify"><input type="checkbox" id="shareNotify" checked> Notify people by email</label>
+    <textarea id="shareMsg" rows="2" placeholder="Add a message (optional)"></textarea>
+
+    <div class="share-sec">People with access</div>
+    <div class="share-people" id="sharePeople"></div>
+
+    <div class="share-sec">Who can open the link</div>
+    <div class="share-general" id="shareGeneral"></div>
+    <div class="share-genrole" id="shareGenRole" hidden>
+      <span id="shareGenLabel"></span>
+      <select id="shareGenRoleSel" aria-label="Link access">
+        <option value="reader">View</option><option value="commenter">Comment</option><option value="writer">Edit</option>
+      </select>
+    </div>
+    <p class="share-note" id="shareNote" hidden>Your latest edits aren’t in Drive yet, so people see the saved version. Use Save → Replace Original, or turn on Auto-save.</p>
+    <p class="share-error" id="shareError" role="alert"></p>
+    <div class="row">
+      <button id="shareCopy" class="btn"><i data-icon="link" data-size="14"></i>Copy link</button>
+      <div class="spacer"></div>
+      <button id="shareDone" class="btn-primary">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="setupModal">
+  <div class="dialog wide">
+    <div class="dlg-head"><h3>Connect Google Sign-In</h3><span class="lights"><button class="x" data-close="setupModal" aria-label="Close"><i data-icon="x" data-size="13"></i></button><i class="tl" aria-hidden="true"></i><i class="tl" aria-hidden="true"></i></span></div>
+    <p class="muted">To sign in with Google, this site needs a free OAuth client ID. It takes about three minutes, once.</p>
+    <ol class="setup-steps">
+      <li>Open <b>console.cloud.google.com</b> → create a project → <b>APIs &amp; Services → Library</b> → enable <b>Google Drive API</b> (and <b>Google Picker API</b> if you want to browse all of Drive).</li>
+      <li><b>OAuth consent screen</b> → External → add the scope <code>.../auth/drive.file</code>.</li>
+      <li><b>Credentials → Create credentials → OAuth client ID → Web application.</b> Under <i>Authorized JavaScript origins</i> add this address:
+        <div class="origin"><code id="setupOrigin"></code><button class="btn" id="setupCopy">Copy</button></div></li>
+      <li>Paste the client ID into <code>config.js</code> (<code>CLIENT_ID</code>), redeploy, and reload.</li>
+    </ol>
+    <div class="row end"><button class="btn-primary" data-close="setupModal">Got it</button></div>
+  </div>
+</div>
+
+<div class="modal" id="sigModal">
+  <div class="dialog wide">
+    <div class="dlg-head"><h3>Signature</h3><span class="lights"><button class="x" data-close="sigModal" aria-label="Close"><i data-icon="x" data-size="13"></i></button><i class="tl" aria-hidden="true"></i><i class="tl" aria-hidden="true"></i></span></div>
+    <div class="sig-top">
+      <div class="segmented">
+        <button class="tab active" data-sigtab="draw"><i data-icon="signature" data-size="14"></i>Draw</button>
+        <button class="tab" data-sigtab="type"><i data-icon="type" data-size="14"></i>Type</button>
+      </div>
+      <div class="sig-colors">
+        <button class="sc active" data-sc="#111827" style="background:#111827" aria-label="Black"></button>
+        <button class="sc" data-sc="#1d4ed8" style="background:#1d4ed8" aria-label="Blue"></button>
+        <button class="sc" data-sc="#b91c1c" style="background:#b91c1c" aria-label="Red"></button>
+      </div>
+    </div>
+    <div class="row" id="sigTypeRow" hidden>
+      <input id="sigText" placeholder="Type your name">
+      <select id="sigFont">
+        <option value="Great Vibes">Great Vibes</option>
+        <option value="Dancing Script">Dancing Script</option>
+        <option value="Caveat">Caveat</option>
+      </select>
+    </div>
+    <canvas id="sigPad"></canvas>
+    <div class="row">
+      <span class="muted small">Kept in this browser for reuse.</span>
+      <div class="spacer"></div>
+      <button id="sigClear" class="btn">Clear</button>
+      <button id="sigUse" class="btn-primary">Use Signature</button>
+    </div>
+    <div class="saved-title">Saved</div>
+    <div id="sigSaved" class="sig-saved"></div>
+  </div>
+</div>
+
+<div class="modal" id="stampModal">
+  <div class="dialog">
+    <div class="dlg-head"><h3>Stamps</h3><span class="lights"><button class="x" data-close="stampModal" aria-label="Close"><i data-icon="x" data-size="13"></i></button><i class="tl" aria-hidden="true"></i><i class="tl" aria-hidden="true"></i></span></div>
+    <div class="stamp-grid" id="stampGrid"></div>
+    <div class="row">
+      <input id="stampText" placeholder="Custom stamp text">
+      <span class="color-well"><input type="color" id="stampColor" value="#2563eb"></span>
+      <button id="stampCustom" class="btn-primary">Use</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="askModal">
+  <div class="dialog narrow">
+    <div class="dlg-head"><h3 id="askTitle"></h3></div>
+    <p id="askText" class="muted"></p>
+    <input id="askInput">
+    <textarea id="askArea"></textarea>
+    <div class="row end"><button id="askCancel" class="btn">Cancel</button><button id="askOk" class="btn-primary">OK</button></div>
+  </div>
+</div>
+
+<div class="modal" id="helpModal">
+  <div class="dialog wide">
+    <div class="dlg-head"><h3>Keyboard Shortcuts</h3><span class="lights"><button class="x" data-close="helpModal" aria-label="Close"><i data-icon="x" data-size="13"></i></button><i class="tl" aria-hidden="true"></i><i class="tl" aria-hidden="true"></i></span></div>
+    <div class="help-cols">
+      <div class="help-sec">
+        <h4>Tools</h4>
+        <div class="hk"><span>Select</span><kbd>V</kbd></div>
+        <div class="hk"><span>Pan</span><kbd>H</kbd></div>
+        <div class="hk"><span>Pen</span><kbd>P</kbd></div>
+        <div class="hk"><span>Highlighter</span><kbd>I</kbd></div>
+        <div class="hk"><span>Eraser</span><kbd>E</kbd></div>
+        <div class="hk"><span>Text</span><kbd>T</kbd></div>
+        <div class="hk"><span>Note</span><kbd>N</kbd></div>
+        <div class="hk"><span>Line · Arrow</span><kbd>L</kbd><kbd>A</kbd></div>
+        <div class="hk"><span>Rectangle · Ellipse</span><kbd>R</kbd><kbd>O</kbd></div>
+        <div class="hk"><span>Highlight Area · Cover</span><kbd>M</kbd><kbd>W</kbd></div>
+        <div class="hk"><span>Redact</span><kbd>X</kbd></div>
+        <div class="hk"><span>Image · Signature · Stamp</span><kbd>G</kbd><kbd>S</kbd><kbd>K</kbd></div>
+      </div>
+      <div class="help-sec">
+        <h4>Editing</h4>
+        <div class="hk"><span>Undo · Redo</span><kbd>Ctrl Z</kbd><kbd>Ctrl Shift Z</kbd></div>
+        <div class="hk"><span>Cut · Copy · Paste</span><kbd>Ctrl X</kbd><kbd>Ctrl C</kbd><kbd>Ctrl V</kbd></div>
+        <div class="hk"><span>Duplicate</span><kbd>Ctrl D</kbd></div>
+        <div class="hk"><span>Delete</span><kbd>Delete</kbd></div>
+        <div class="hk"><span>Nudge (×10 with Shift)</span><kbd>←↑↓→</kbd></div>
+        <div class="hk"><span>Finish typing</span><kbd>Ctrl Enter</kbd></div>
+        <h4>View &amp; File</h4>
+        <div class="hk"><span>Zoom</span><kbd>Ctrl +</kbd><kbd>Ctrl −</kbd><kbd>Ctrl 0</kbd></div>
+        <div class="hk"><span>Pan temporarily</span><kbd>Space</kbd></div>
+        <div class="hk"><span>Find</span><kbd>Ctrl F</kbd></div>
+        <div class="hk"><span>Save</span><kbd>Ctrl S</kbd></div>
+        <div class="hk"><span>Straight lines · squares · aspect lock</span><kbd>Shift</kbd></div>
+        <div class="hk"><span>Move without snapping</span><kbd>Alt</kbd></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="busy" class="busy"><div class="hud"><div class="spinner"></div><div id="busyMsg"></div></div></div>
+
+<script>window.INITIAL_FILE_ID = "";</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
