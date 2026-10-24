@@ -1675,7 +1675,7 @@ function gis() {
   });
 }
 function requestToken(prompt) {
-  return gis().then(c => new Promise((res, rej) => { tokenWait = { res, rej }; c.requestAccessToken({ prompt }); }));
+  return gis().then(c => new Promise((res, rej) => { tokenWait = { res, rej }; c.requestAccessToken({ prompt, ...(D.last && D.last.email ? { hint: D.last.email } : {}) }); }));
 }
 function takeToken(r) { D.token = r.access_token; D.exp = Date.now() + Math.max(60, (r.expires_in || 3600) - 90) * 1000; }
 
@@ -3548,10 +3548,10 @@ initGasUser();
 /* Website: stay signed in across visits. Show the remembered account right away, then quietly get a fresh
    Google token (tokens last about an hour). Browsers only allow Google's small pop-up after a click, so if the
    quiet attempt is blocked we retry on the first click or key press. */
-let silentBusy = false;
+let silentBusy = false, silentTries = 0;
 async function silentSignIn() {
-  if (HAS_GAS || !CFG.CLIENT_ID || !D.last || silentBusy || driveLive()) return;
-  silentBusy = true;
+  if (HAS_GAS || !CFG.CLIENT_ID || !D.last || silentBusy || driveLive() || silentTries >= 2) return;
+  silentBusy = true; silentTries++;
   try {
     takeToken(await requestToken('none'));
     D.user = await DRV.me();
@@ -3564,7 +3564,8 @@ async function silentSignIn() {
 if (!HAS_GAS && D.last && CFG.CLIENT_ID) {
   D.user = D.last; D.token = null;
   setTimeout(silentSignIn, 600);
-  ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, () => { if (!driveLive()) silentSignIn(); }, { capture: true }));
+  const once = () => { if (silentTries >= 2) return; if (!driveLive()) silentSignIn(); };
+  ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, once, { capture: true, once: true }));
   setInterval(() => { if (D.user && D.token && Date.now() > D.exp - 120000) { D.token = null; } }, 60000);
 }
 updateAccountUI();
