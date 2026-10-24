@@ -3569,6 +3569,25 @@ if (!HAS_GAS && D.last && CFG.CLIENT_ID) {
   ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, once, { capture: true, once: true }));
   setInterval(() => { if (D.user && D.token && Date.now() > D.exp - 120000) { D.token = null; } }, 60000);
 }
+/* Google Drive "Open with → PDF Studio": Drive sends people here with ?state={"ids":["<fileId>"],"action":"open"}. */
+let pendingDriveId = null;
+async function openPendingDrive() {
+  if (!pendingDriveId) return;
+  if (!(await ensureDrive())) return;
+  const id = pendingDriveId; pendingDriveId = null;
+  openFromDrive(id, 'open');
+}
+(function () {
+  if (HAS_GAS) return;
+  let st = null;
+  try { st = JSON.parse(new URLSearchParams(location.search).get('state') || 'null'); } catch (e) {}
+  const id = st && ((st.ids && st.ids[0]) || (st.exportIds && st.exportIds[0]));
+  if (!id || st.action === 'create') return;
+  pendingDriveId = id;
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  window.addEventListener('pointerdown', openPendingDrive, { once: true, capture: true });
+  setTimeout(async () => { await silentSignIn(); if (driveLive()) openPendingDrive(); else toast('Click anywhere to open your file from Google Drive', 9000); }, 900);
+})();
 updateAccountUI();
 if (window.INITIAL_FILE_ID && HAS_GAS) openFromDrive(window.INITIAL_FILE_ID); else refreshHome();
 pruneDocs();
