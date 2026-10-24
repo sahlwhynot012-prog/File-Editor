@@ -4,5 +4,5 @@
 window.PDFSTUDIO_CONFIG = {
   CLIENT_ID: '245147469826-0duvvssc7lbuoq1q0n1dv936gklpqtcv.apps.googleusercontent.com',
   API_KEY: 'AIzaSyBozQJ624gaHUnLyKL6euWOoKnRPD3fs_U',
-  APP_ID: ''
+  APP_ID: '245147469826'
 };
