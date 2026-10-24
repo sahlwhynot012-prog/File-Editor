@@ -13,7 +13,8 @@ const errMsg = e => String((e && e.message) || e);
 let _n = 0;
 const uid = () => (++_n).toString(36) + Math.random().toString(36).slice(2, 7);
 
-const CFG = window.PDFSTUDIO_CONFIG || {};
+// Built-in defaults, so sign-in still works even if config.js is cached or fails to load. config.js overrides these.
+const CFG = Object.assign({ CLIENT_ID: '245147469826-0duvvssc7lbuoq1q0n1dv936gklpqtcv.apps.googleusercontent.com', FULL_DRIVE: true }, window.PDFSTUDIO_CONFIG || {});
 /** Calls a Drive action: the Apps Script server when running there, otherwise Google's Drive API with your own sign-in. */
 const gas = (fn, ...args) => {
   if (HAS_GAS) return new Promise((resolve, reject) => google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args));
