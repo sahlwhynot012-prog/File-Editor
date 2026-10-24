@@ -1616,7 +1616,8 @@ async function openFiles(files, mode) {
 
 /* ============================================================ google account + drive */
 // NOTE: write web addresses as https:\/\/ in this file. Apps Script's HTML server treats a bare // as a comment, even inside strings.
-const DR_SCOPE = 'https:\/\/www.googleapis.com/auth/drive.file';
+// FULL_DRIVE (config.js) lets the built-in file browser show your whole Drive; otherwise only files this app made or opened.
+const DR_SCOPE = 'https:\/\/www.googleapis.com/auth/drive' + (CFG.FULL_DRIVE ? '' : '.file');
 const DR_API = 'https:\/\/www.googleapis.com/drive/v3';
 const DR_FILES = DR_API + '/files';
 const DR_UPLOAD = 'https:\/\/www.googleapis.com/upload/drive/v3/files';
@@ -1748,6 +1749,10 @@ const DRV = {
   },
   async listFiles(query) {
     let q = 'trashed = false and (' + OPENABLE_MIMES.map(m => `mimeType = '${m}'`).join(' or ') + ')';
+    const fl = S.driveFilter || 'all';
+    if (fl === 'pdf') q += " and mimeType = 'application/pdf'";
+    if (fl === 'shared') q += ' and sharedWithMe = true';
+    if (fl === 'starred') q += ' and starred = true';
     if (query) q += ` and name contains '${String(query).replace(/['\\]/g, '\\$&')}'`;
     const u = new URLSearchParams({ q, orderBy: 'modifiedTime desc', pageSize: '100', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true',
       fields: 'files(id,name,mimeType,modifiedTime,size,shared,webViewLink)' });
@@ -1846,7 +1851,7 @@ async function initGasUser() {
 /** Google's file picker (website version): lets people open any of their Drive files with the narrow drive.file permission. */
 async function pickFromDrive(mode) {
   if (!(await ensureDrive())) return;
-  if (!CFG.API_KEY || !CFG.APP_ID) { openDriveList(mode); return; }
+  if (CFG.FULL_DRIVE || !CFG.API_KEY || !CFG.APP_ID) { openDriveList(mode); return; }
   try {
     if (!(window.gapi && gapi.load)) await loadScript('https:\/\/apis.google.com/js/api.js');
     await new Promise(r => gapi.load('picker', r));
@@ -1969,7 +1974,8 @@ async function openFromDrive(id, mode = 'open') {
 function openDrivePicker(mode) { if (HAS_GAS) openDriveList(mode); else pickFromDrive(mode); }
 function openDriveList(mode) {
   S.pickMode = mode;
-  $('#driveNote').hidden = HAS_GAS;
+  $('#driveNote').hidden = HAS_GAS || !!CFG.FULL_DRIVE;
+  S.driveFilter = 'all'; $$('#driveTabs button').forEach(b => b.classList.toggle('on', b.dataset.f === 'all'));
   $('#driveTitle').textContent = mode === 'insert' ? 'Insert from Drive' : 'Open from Drive';
   $('#driveSearch').value = '';
   openModal('driveModal');
@@ -3368,6 +3374,9 @@ function buildUI() {
     catch (err) { toast(errMsg(err)); }
   });
   let dsT = 0;
+  $$('#driveTabs button').forEach(b => b.onclick = () => {
+    S.driveFilter = b.dataset.f; $$('#driveTabs button').forEach(x => x.classList.toggle('on', x === b)); loadDriveList($('#driveSearch').value.trim());
+  });
   $('#driveSearch').addEventListener('input', e => { clearTimeout(dsT); dsT = setTimeout(() => loadDriveList(e.target.value.trim()), 350); });
 
   // toolbar
