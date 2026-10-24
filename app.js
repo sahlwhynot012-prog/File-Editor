@@ -1849,9 +1849,12 @@ async function pickFromDrive(mode) {
   try {
     if (!(window.gapi && gapi.load)) await loadScript('https:\/\/apis.google.com/js/api.js');
     await new Promise(r => gapi.load('picker', r));
-    const view = new google.picker.DocsView(google.picker.ViewId.DOCS).setIncludeFolders(true).setMimeTypes(OPENABLE_MIMES.join(','));
-    new google.picker.PickerBuilder()
-      .addView(view).addView(new google.picker.DocsUploadView())
+    const P = google.picker;
+    const all = new P.DocsView(P.ViewId.DOCS).setIncludeFolders(true).setLabel('My Drive');
+    const pdfs = new P.DocsView(P.ViewId.PDFS).setIncludeFolders(true).setLabel('PDFs');
+    const shared = new P.DocsView(P.ViewId.DOCS).setOwnedByMe(false).setIncludeFolders(true).setLabel('Shared with me');
+    new P.PickerBuilder()
+      .addView(all).addView(pdfs).addView(shared).addView(new P.DocsUploadView())
       .setOAuthToken(await driveToken()).setDeveloperKey(CFG.API_KEY).setAppId(CFG.APP_ID)
       .setTitle(mode === 'insert' ? 'Insert from Google Drive' : 'Open from Google Drive')
       .setCallback(d => { if (d.action === google.picker.Action.PICKED && d.docs && d.docs[0]) openFromDrive(d.docs[0].id, mode); })
