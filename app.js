@@ -1647,6 +1647,7 @@ const OPENABLE_MIMES = ['application/pdf', ...Object.values(GM), ...Object.keys(
 const D = { token: null, exp: 0, user: null, last: null, gasTok: null, gasExp: 0 };
 try { D.last = JSON.parse(localStorage.getItem('pdfstudio-user') || 'null'); } catch (e) {}
 const driveReady = () => HAS_GAS || !!D.user;
+const driveLive = () => HAS_GAS || !!(D.user && D.token && Date.now() < D.exp);
 const enc = encodeURIComponent;
 
 function loadScript(src) {
@@ -2867,7 +2868,7 @@ function scheduleDriveSave() {
   if (S.autoDrive && S.fileId && S.dirty) driveT = setTimeout(autoSaveDrive, 6000);
 }
 async function autoSaveDrive() {
-  if (!S.autoDrive || !S.fileId || !S.dirty || S.saving || S.autoBusy || !driveReady()) return;
+  if (!S.autoDrive || !S.fileId || !S.dirty || S.saving || S.autoBusy || !driveLive()) return;
   S.autoBusy = true;
   const t0 = S.editedAt;
   try {
@@ -2988,7 +2989,7 @@ async function refreshHome() {
   }
   // files in Google Drive that aren't in Recent yet
   const sec = $('#driveSec'), dg = $('#driveGrid');
-  if (!driveReady()) { sec.hidden = true; return; }
+  if (!driveLive()) { sec.hidden = true; return; }
   sec.hidden = false;
   try {
     const files = (await DRV.listFiles('')).filter(f => !seen.has(f.id)).slice(0, 12);
@@ -3535,6 +3536,28 @@ setTool('select', true);
 updateUndoUI(); updateSaveUI();
 window.__PDFSTUDIO_READY = true;
 initGasUser();
+/* Website: stay signed in across visits. Show the remembered account right away, then quietly get a fresh
+   Google token (tokens last about an hour). Browsers only allow Google's small pop-up after a click, so if the
+   quiet attempt is blocked we retry on the first click or key press. */
+let silentBusy = false;
+async function silentSignIn() {
+  if (HAS_GAS || !CFG.CLIENT_ID || !D.last || silentBusy || driveLive()) return;
+  silentBusy = true;
+  try {
+    takeToken(await requestToken('none'));
+    D.user = await DRV.me();
+    D.last = { name: D.user.name, email: D.user.email, photo: D.user.photo };
+    try { localStorage.setItem('pdfstudio-user', JSON.stringify(D.last)); } catch (e) {}
+    updateAccountUI(); refreshHomeSoon();
+  } catch (e) { /* needs a click first; the listener below retries */ }
+  silentBusy = false;
+}
+if (!HAS_GAS && D.last && CFG.CLIENT_ID) {
+  D.user = D.last; D.token = null;
+  setTimeout(silentSignIn, 600);
+  ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, () => { if (!driveLive()) silentSignIn(); }, { capture: true }));
+  setInterval(() => { if (D.user && D.token && Date.now() > D.exp - 120000) { D.token = null; } }, 60000);
+}
 updateAccountUI();
 if (window.INITIAL_FILE_ID && HAS_GAS) openFromDrive(window.INITIAL_FILE_ID); else refreshHome();
 pruneDocs();
