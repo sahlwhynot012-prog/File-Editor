@@ -3,6 +3,6 @@
    API_KEY + APP_ID are optional: they enable Google's file picker so people can browse their whole Drive. */
 window.PDFSTUDIO_CONFIG = {
   CLIENT_ID: '245147469826-0duvvssc7lbuoq1q0n1dv936gklpqtcv.apps.googleusercontent.com',
-  API_KEY: '',
+  API_KEY: 'AIzaSyBozQJ624gaHUnLyKL6euWOoKnRPD3fs_U',
   APP_ID: ''
 };
