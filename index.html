@@ -238,6 +238,9 @@
   <div class="dialog wide">
     <div class="dlg-head"><h3 id="driveTitle">Open from Drive</h3><span class="lights"><button class="x" data-close="driveModal" aria-label="Close"><i data-icon="x" data-size="13"></i></button><i class="tl" aria-hidden="true"></i><i class="tl" aria-hidden="true"></i></span></div>
     <label class="search big"><i data-icon="search" data-size="14"></i><input id="driveSearch" placeholder="Search your Drive or paste a link" spellcheck="false"></label>
+    <div class="drive-tabs" id="driveTabs">
+      <button data-f="all" class="on">All files</button><button data-f="pdf">PDFs</button><button data-f="shared">Shared with me</button><button data-f="starred">Starred</button>
+    </div>
     <p id="driveNote" class="muted small drive-note" hidden>This list shows files PDF Studio created or opened. Add a Google API key in config.js to browse your whole Drive.</p>
     <div class="drive-list" id="driveList"></div>
   </div>
